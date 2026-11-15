@@ -1,0 +1,22 @@
+# Example only. Create the so7obdash service user, set up files/logs securely,
+# and adjust paths for the installed Node 24 binaries and application.
+[Unit]
+Description=So7obDash private GitHub dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=so7obdash
+Group=so7obdash
+WorkingDirectory=/srv/so7obdash
+EnvironmentFile=/etc/so7obdash/live.env
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

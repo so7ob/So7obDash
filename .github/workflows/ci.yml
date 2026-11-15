@@ -1,0 +1,36 @@
+name: Verify
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SO7OB_MODE: demo
+      HOST: 127.0.0.1
+      PORT: 3086
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm start > "${RUNNER_TEMP}/so7obdash.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; cat "${RUNNER_TEMP}/so7obdash.log"' EXIT
+          curl --silent --show-error --fail --max-time 10 --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:3086/ > /tmp/so7obdash-index.html
+          curl --silent --show-error --fail --max-time 10 http://127.0.0.1:3086/api/session > /tmp/so7obdash-session.json
+          curl --silent --show-error --fail --max-time 10 http://127.0.0.1:3086/api/bootstrap > /tmp/so7obdash-bootstrap.json
+          node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const read=p=>JSON.parse(fs.readFileSync(p,"utf8"));assert.equal(read(process.argv[1]).authenticated,true);const b=read(process.argv[2]);assert.equal(b.mode,"demo");assert.equal(b.connections.length,2);assert.ok(b.repositories.length>0);' /tmp/so7obdash-session.json /tmp/so7obdash-bootstrap.json
