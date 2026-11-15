@@ -2,7 +2,7 @@
 
 ## 1. تطبيق GitHub
 
-1. أنشئ GitHub App خاصًا لهذا الاستخدام، وثبّته على المستودعات المختارة فقط. تجنّب خيار منح التطبيق الوصول إلى كل المستودعات المستقبلية.
+1. أنشئ GitHub App مخصصًا لهذا الاستخدام. إذا كانت المستودعات موزعة بين أكثر من مالك، مثل حساب شخصي ومؤسسة، فاجعل **تسجيل GitHub App** قابلاً للتثبيت لدى حسابات أخرى (`Public`). لا يلزم نشره في Marketplace، وتظل **لوحة So7obDash نفسها خاصة** بتسجيل دخول المالك، ولا تقبل إلا معرّفات التثبيت المدرجة في إعداداتها. التسجيل `Private` في GitHub يمكن تثبيته لدى مالكه فقط، والإصدار الحالي يستخدم بيانات تطبيق واحد. في كل تثبيت اختر المستودعات المقصودة فقط. راجع [خيارات إتاحة تطبيقات GitHub](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private).
 2. ابدأ بصلاحيات القراءة فقط: `Metadata`، و`Issues`، و`Pull requests`، و`Actions`، و`Contents` عند الحاجة إلى قراءة الإصدارات أو سجل الالتزامات. لا تمنح صلاحيات كتابة أو إدارة. اختيار مستودعات التثبيت هو حد الوصول الأساسي.
 3. فعّل Webhook إن كنت ستستخدم المزامنة عند الحدث. عنوانه `https://<dashboard-host>/api/webhooks/github`؛ استخدم سرًّا مستقلاً عشوائيًا من 32 خانة على الأقل، واجعل قيمة `GITHUB_WEBHOOK_SECRET` مطابقة له. اختر أحداث المصادر المعروضة مثل Issues وPull requests وWorkflow run وRelease، مع أحداث التثبيت/تغيير الوصول المتاحة للتطبيق. راجع [الأحداث والصلاحيات](https://docs.github.com/en/webhooks/webhook-events-and-payloads).
 4. سجّل App ID ومعرّفات التثبيت المطلوبة. نزّل مفتاح PEM على الخادم فقط، واجعل الملف قابلاً للقراءة من حساب خدمة التطبيق لا من مستخدمي النظام الآخرين. راجع [صلاحيات تطبيقات GitHub](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app).
