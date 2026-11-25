@@ -66,6 +66,7 @@ export async function syncGitHub({
 }: Config): Promise<{ mode: 'live'; connections: Connection[]; repositories: Repository[]; syncErrors?: string[] }> {
   const connections: Connection[] = [], syncErrors: string[] = [];
   const repositories = new Map<ID, Repository>();
+  const unresolved = new Set<ID>();
   const configured = [...new Set([...allowedInstallations].map(String))];
   if (!configured.length || configured.some(value => !/^[1-9]\d*$/.test(value))) {
     return { mode: 'live', connections, repositories: [], syncErrors: ['No valid explicit installation allowlist.'] };
@@ -135,6 +136,15 @@ export async function syncGitHub({
         }
         const old = repositories.get(repoId);
         if (old) {
+          // Conflicting inventory snapshots can occur during a rename or transfer.
+          // Do not select a canonical path by installation order.
+          if (old.fullName.toLowerCase() !== (owner + '/' + name).toLowerCase()) {
+            unresolved.add(repoId);
+            connection.status = 'partial';
+            for (const source of connections) {
+              if (old.connectionIds.includes(source.id)) source.status = 'partial';
+            }
+          }
           if (!old.connectionIds.includes(installationId)) old.connectionIds.push(installationId);
           continue;
         }
@@ -220,7 +230,10 @@ export async function syncGitHub({
     if (scoped.items.some(x => !x.pull_request && !id(x.id))) return;
     if (total) repo.progress = { completed, total, percent: Math.round(completed / total * 1000) / 10, title: milestone.title };
   }
-  const list = [...repositories.values()];
+  for (const repoId of unresolved) {
+    syncErrors.push('Repository ' + repoId + ': inventory identity unresolved; retry synchronization.');
+  }
+  const list = [...repositories.values()].filter(repo => !unresolved.has(repo.id));
   for (let i = 0; i < list.length; i += 2) await Promise.all(list.slice(i, i + 2).map(details));
   return { mode: 'live', connections, repositories: list.filter(repo => repo.syncStatus !== 'inaccessible'), ...(syncErrors.length ? { syncErrors } : {}) };
 }

@@ -12,7 +12,7 @@
     "start": "node --env-file-if-exists=.env server/index.ts",
     "owner-password": "node server/password.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test server/*.test.*",
+    "test": "node --test server/*.test.* web/src/*.test.ts",
     "check": "npm run typecheck && npm test"
   },
   "dependencies": {
