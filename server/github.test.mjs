@@ -37,6 +37,10 @@ function environment(overrides = {}) {
       return ok({ account: { login: 'owner-' + app[1], type: 'Organization' } });
     }
     if (u.pathname === '/installation/repositories') {
+      if (overrides.inventory) {
+        const installation = h.get('authorization').slice('Bearer t'.length);
+        return ok({ repositories: overrides.inventory[installation] ?? [] });
+      }
       if (h.get('authorization') === 'Bearer t1') {
         return u.searchParams.get('page') === '1' ? ok({ repositories: [repo(100, 'alpha')] }, true) : ok({ repositories: [repo(200, 'beta')] });
       }
@@ -115,4 +119,31 @@ test('repository lost during synchronization is hidden unless another allowed in
   const result = await run([1, 2]);
   assert.deepEqual(result.repositories.map(r => r.fullName), ['alpha/same']);
   assert.equal(result.repositories[0].syncStatus, 'synced');
+});
+
+test('repository transfer preserves stable identity and updates canonical path and scope', async () => {
+  const inventory = { 1: [repo(100, 'old-owner')], 2: [] };
+  const { run } = environment({ inventory });
+  assert.deepEqual((await run([1, 2])).repositories.map(r => [r.id, r.fullName, r.connectionIds]), [['100', 'old-owner/same', ['1']]]);
+  inventory[1] = [];
+  inventory[2] = [repo(100, 'new-org')];
+  assert.deepEqual((await run([1, 2])).repositories.map(r => [r.id, r.fullName, r.connectionIds]), [['100', 'new-org/same', ['2']]]);
+  assert.deepEqual((await run([1])).repositories, []);
+  inventory[1] = [repo(200, 'old-owner')];
+  assert.deepEqual((await run([1, 2])).repositories.map(r => [r.id, r.fullName]), [['200', 'old-owner/same'], ['100', 'new-org/same']]);
+});
+
+test('conflicting transfer snapshots are unresolved independent of installation order', async () => {
+  const inventory = { 1: [repo(100, 'old-owner')], 2: [repo(100, 'new-org')] };
+  const { run, calls } = environment({ inventory });
+  for (const order of [[1, 2], [2, 1]]) {
+    const result = await run(order);
+    assert.deepEqual(result.repositories, []);
+    assert.ok(result.connections.every(c => c.status === 'partial'));
+    assert.match(result.syncErrors.join(' '), /identity unresolved/);
+  }
+  assert.equal(calls.filter(c => c.path.startsWith('/repos/')).length, 0);
+  inventory[1] = [];
+  const recovered = await run([1, 2]);
+  assert.deepEqual(recovered.repositories.map(r => [r.id, r.fullName]), [['100', 'new-org/same']]);
 });
